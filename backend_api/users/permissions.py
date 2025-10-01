@@ -8,7 +8,9 @@ class IsSuperUser(permissions.BasePermission):
     message="Only superusers are allowed to perform this action."
 
     def has_permission(self, request, view):
+
         return request.user and request.user.is_authenticated and request.user.is_super_user
+
 
 class IsOwnerOrSuperUser(permissions.BasePermission):
     """
@@ -23,6 +25,7 @@ class IsOwnerOrSuperUser(permissions.BasePermission):
             return True
 
         return obj == request.user or request.user.is_super_user
+
 
 class IsOwnerReadOnly(permissions.BasePermission):
     """

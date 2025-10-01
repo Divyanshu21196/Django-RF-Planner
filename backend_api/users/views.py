@@ -1,14 +1,98 @@
 from rest_framework import permissions, viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import get_user_model
-from .serializers import UserCreateSerializer, UserUpdateSerializer, UserListSerializer, UserDetailSerializer
+from .serializers import (
+    UserCreateSerializer, UserUpdateSerializer, UserListSerializer, UserDetailSerializer,
+    ForgotPasswordSerializer, ResetPasswordSerializer
+)
 from .permissions import IsOwnerOrSuperUser, IsSuperUser
 
 
 User = get_user_model()
 
+
+class LogoutView(APIView):
+    """
+    Custom logout view that blacklists the refresh token
+    FIXED: Proper token blacklist functionality
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        try:
+            refresh_token = request.data.get("refresh")
+            if not refresh_token:
+                return Response(
+                    {"error": "Refresh token is required"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Properly blacklist the token
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+
+            return Response(
+                {"message": "Successfully logged out"},
+                status=status.HTTP_200_OK
+            )
+        except TokenError as e:
+            return Response(
+                {"error": "Invalid token or token already blacklisted"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {"error": "Something went wrong"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class ForgotPasswordView(APIView):
+    """
+    Generate temporary password and send to user's email
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = ForgotPasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                result = serializer.save()
+                return Response(result, status=status.HTTP_200_OK)
+            except Exception as e:
+                return Response(
+                    {"error": "Failed to send temporary password. Please try again."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ResetPasswordView(APIView):
+    """
+    Reset password using temporary password
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = ResetPasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            try:
+                result = serializer.save()
+                return Response(result, status=status.HTTP_200_OK)
+            except Exception as e:
+                return Response(
+                    {"error": "Failed to reset password. Please try again."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
 class UserViewSet(viewsets.ModelViewSet):
+
     queryset = User.objects.all()
     serializer_class = UserListSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwnerOrSuperUser]

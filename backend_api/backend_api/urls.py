@@ -8,15 +8,16 @@ from drf_spectacular.views import (
 
 
 urlpatterns = [
-    #Admin
-    path('admin/',admin.site.urls),
-    #Api Schema
-    path('api/schema/',SpectacularAPIView.as_view(),name='schema'),
-    path('api/docs/',SpectacularSwaggerView.as_view(url_name='schema'),name='swagger-ui'),
-    path('api/redoc/',SpectacularRedocView.as_view(url_name='schema'),name='redoc'),
+    # Admin
+    path('admin/', admin.site.urls),
 
-    #ApiEndpoint
-    path('api/',include('users.urls')),
-    path('api/',include('stores.urls')),
-    path('api/',include('events.urls'))
+    # API Schema and Documentation
+    path('api/v1/schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('api/v1/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('api/v1/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+
+  # API v1 endpoints - FIXED NAMESPACE VERSIONING
+    path('api/v1/', include('users.urls', namespace='v1')),
+    path('api/v1/', include('stores.urls', namespace='v1')),
+    path('api/v1/', include('events.urls', namespace='v1')),
 ]
